@@ -16,6 +16,8 @@ const io = new Server(server, {
   },
 });
 
+const rooms = {};
+
 app.get("/", (req, res) => {
   res.send("Uno Backend API");
 });
@@ -26,15 +28,43 @@ io.on("connection", (socket) => {
   socket.on("joinRoom", ({ roomCode, username }) => {
     socket.join(roomCode);
     console.log(`👥 ${username} joined room: ${roomCode}`);
+
+    socket.data.username = username;
+    socket.data.roomCode = roomCode;
+
+    if (!rooms[roomCode]) {
+      rooms[roomCode] = [];
+    }
+
+    rooms[roomCode].push({ id: socket.id, username });
+
+    io.to(roomCode).emit("playerListUpdate", {
+      players: rooms[roomCode],
+    });
+
+    io.to(roomCode).emit("joinedRoom", {
+      message: `${username} has joined room ${roomCode}`,
+    });
   });
 
   socket.on("disconnect", () => {
-    console.log(`❌ ${socket.data.username || socket.id} disconnected`);
+    const { roomCode, username } = socket.data;
 
-    if (socket.data.roomCode && socket.data.username) {
-      io.to(socket.data.roomCode).emit("leftRoom", {
-        message: `${socket.data.username} left the room`,
-      });
+    if (roomCode && rooms[roomCode]) {
+      rooms[roomCode] = rooms[roomCode].filter(
+        (player) => player.id !== socket.id
+      );
+
+      console.log(`❌ ${username} left ${roomCode}`);
+
+      if (rooms[roomCode].length === 0) {
+        delete rooms[roomCode];
+        console.log(`The room: ${roomCode} is deleted`);
+      } else {
+        io.to(roomCode).emit("playerListUpdate", {
+          players: rooms[roomCode],
+        });
+      }
     }
   });
 });
