@@ -4,6 +4,9 @@ import { io, Socket } from "socket.io-client";
 import { useUser } from "../utils/userContext";
 import { useSearchParams } from "next/navigation";
 
+import packOfCards from "../utils/packOfCards";
+import shuffleArray from "../utils/shuffleArray";
+
 export default function Game() {
   const socket = useRef<Socket | null>(null);
 
@@ -43,9 +46,39 @@ export default function Game() {
     };
   }, [roomCode, username]);
 
+  // Game start
+  const [gameOver, setGameOver] = useState(true);
+  const [winner, setWinner] = useState("");
+  const [turn, setTurn] = useState("clockwise");
+  const [currentColor, setCurrentColor] = useState("");
+  const [currentNumber, setCurrentNumber] = useState("");
+  const [cardsPile, setCardsPile] = useState([]);
+  const [drawCardPile, setDrawCardPile] = useState([]);
+
+  function generateDeck() {
+    return ["red 1", "green 5", "wild", "yellow 3"]; // testing
+  }
+
+  const playersWithDecks = players.map((player) => ({
+    ...player,
+    deck: generateDeck(),
+  }));
+
+  const [showLobby, setShowLobby] = useState(true);
+  const handleStartGame = () => {
+    // setShowLobby(false); //Remove comment after testing
+    console.log(playersWithDecks);
+  };
+
   return (
     <div className="text-white bg-black h-screen w-screen flex flex-col items-center justify-center">
-      <div className="flex flex-col justify-center items-center h-[500px] w-[800px] bg-[#DBD6D7] p-6 text-black rounded">
+      <div
+        className={
+          showLobby
+            ? "lobby flex flex-col justify-center items-center h-[500px] w-[800px] bg-[#DBD6D7] p-6 text-black rounded"
+            : "hidden"
+        }
+      >
         <div className="title text-3xl text-neutral-900 tracking-tighter text-center font-semibold w-[700px] border-b-2 border-solid border-[#928E8F] m-3 pb-1">
           Uno: Card Game
         </div>
@@ -69,7 +102,10 @@ export default function Game() {
           </ul>
         </div>
         <div className="startGame w-[500px]">
-          <button className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2 mt-2">
+          <button
+            onClick={handleStartGame}
+            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2 mt-2"
+          >
             Start Game
           </button>
         </div>
