@@ -1,45 +1,10 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-import { io, Socket } from "socket.io-client";
+import React, { useState } from "react";
 import Link from "next/link";
 import randomCodeGenerator from "../app/utils/randomCodeGenerator";
 
 export default function Home() {
-  const socketRef = useRef<Socket | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [serverMsg, setServerMsg] = useState("");
-
-  // For type of connection
-  const glitchAddress = "wss://south-yummy-milkshake.glitch.me";
-  const localAddress = "http://localhost:8080";
-
-  useEffect(() => {
-    if (!socketRef.current) {
-      socketRef.current = io(localAddress, {
-        transports: ["websocket"],
-      });
-
-      socketRef.current.on("connect", () => {
-        console.log("✅ Connected to server");
-
-        // 👇 Emit to server
-        socketRef.current?.emit("pingFromClient", {
-          message: "Hello from client!",
-        });
-      });
-
-      // 👇 Listen for server response
-      socketRef.current.on("pongFromServer", (data) => {
-        console.log("📥 Received from server:", data);
-        setServerMsg(data.message);
-      });
-    }
-
-    return () => {
-      socketRef.current?.disconnect();
-      socketRef.current = null;
-    };
-  }, []);
+  const [roomCode, setRoomCode] = useState('')
 
   return (
     <div className="flex inset-0 justify-center items-center h-screen w-screen bg-black">
@@ -68,13 +33,16 @@ export default function Home() {
               id="name"
               placeholder="Game Code"
               type="text"
+              onChange={(event) => setRoomCode(event.target.value)}
             />
-            <button
+            <Link href={`/play?roomCode=${roomCode}`}>
+              <button
               className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2"
               type="submit"
             >
               Join Game
             </button>
+            </Link>
           </div>
           <div className="text-center m-3">Or</div>
           <div className="createRoom">
@@ -88,8 +56,6 @@ export default function Home() {
             </Link>
           </div>
         </div>
-
-        {/* {serverMsg ? serverMsg : "Waiting for server..."} */}
       </div>
     </div>
   );
