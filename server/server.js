@@ -23,17 +23,21 @@ app.get("/", (req, res) => {
 io.on("connection", (socket) => {
   console.log("✅ Client connected:", socket.id);
 
-  socket.on("pingFromClient", (data) => {
-    console.log("📩 Received from client:", data);
-
-    socket.emit("pongFromServer", { message: "Hello from server!" });
+  socket.on("joinRoom", ({ roomCode, username }) => {
+    socket.join(roomCode);
+    console.log(`👥 ${username} joined room: ${roomCode}`);
   });
 
   socket.on("disconnect", () => {
-    console.log(`❌ User "${socket.id}" disconnected`);
+    console.log(`❌ ${socket.data.username || socket.id} disconnected`);
+
+    if (socket.data.roomCode && socket.data.username) {
+      io.to(socket.data.roomCode).emit("leftRoom", {
+        message: `${socket.data.username} left the room`,
+      });
+    }
   });
 });
-
 
 server.listen(port, () => {
   console.log(`Server is running on PORT: ${port}`);

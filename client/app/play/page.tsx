@@ -1,49 +1,41 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
+import { useUser } from "../utils/userContext";
+import { useSearchParams } from "next/navigation";
 
 export default function Game() {
-  const socketRef = useRef<Socket | null>(null);
-    const [socket, setSocket] = useState<Socket | null>(null);
-    const [serverMsg, setServerMsg] = useState("");
+  const socket = useRef<Socket | null>(null);
 
-    // For type of connection
-  const glitchAddress = "wss://south-yummy-milkshake.glitch.me";
+  const { username } = useUser();
+  const searchParams = useSearchParams();
+  const roomCode = searchParams.get("roomCode");
+
+  // For type of connection (Use ENV)
+  const glitchAddress = "";
   const localAddress = "http://localhost:8080";
 
-  useEffect(() => {
-    if (!socketRef.current) {
-      socketRef.current = io(localAddress, {
-        transports: ["websocket"],
-      });
+    useEffect(() => {
+    if (!roomCode || !username) return;
 
-      socketRef.current.on("connect", () => {
-        console.log("✅ Connected to server");
+    socket.current = io(localAddress, {
+      transports: ["websocket"],
+    });
 
-        // 👇 emit to server
-        socketRef.current?.emit("pingFromClient", {
-          message: "Hello from client!",
-        });
-      });
-
-      // 👇 Listen for server response
-      socketRef.current.on("pongFromServer", (data) => {
-        console.log("📥 Received from server:", data);
-        setServerMsg(data.message);
-      });
-    }
+    socket.current.on("connect", () => {
+      console.log("Connected");
+      socket.current?.emit("joinRoom", { roomCode, username });
+    });
 
     return () => {
-      socketRef.current?.disconnect();
-      socketRef.current = null;
+      socket.current?.disconnect();
     };
-  }, []);
+  }, [roomCode, username]);
 
   return (
-    <div className='flex inset-0 justify-center items-center h-screen w-screen bg-black'>
-      Gamepage
-      <br />
-      {serverMsg ? serverMsg : "Waiting for server..."}
+    <div className="text-white bg-black h-screen w-screen flex flex-col items-center justify-center">
+      <h1>Welcome to Room: {roomCode}</h1>
+      <h2>Player: {username}</h2>
     </div>
   );
 }
