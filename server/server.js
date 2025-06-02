@@ -38,10 +38,21 @@ io.on("connection", (socket) => {
 
     rooms[roomCode].push({ id: socket.id, username });
 
-    io.to(roomCode).emit("playerListUpdate", {
-      players: rooms[roomCode],
+    const roomOwner = rooms[roomCode][0];
+    console.log(
+      `👑 Owner of room ${roomCode} is ${roomOwner.username}`
+    );
+
+    rooms[roomCode].forEach((player) => {
+      io.to(player.id).emit("playerListUpdate", {
+        realId: player.id,
+        players: rooms[roomCode],
+        ownerId: roomOwner.id,
+      });
     });
 
+
+    // Test
     io.to(roomCode).emit("joinedRoom", {
       message: `${username} has joined room ${roomCode}`,
     });
@@ -61,8 +72,16 @@ io.on("connection", (socket) => {
         delete rooms[roomCode];
         console.log(`The room: ${roomCode} is deleted`);
       } else {
-        io.to(roomCode).emit("playerListUpdate", {
-          players: rooms[roomCode],
+        const roomOwner = rooms[roomCode][0]; // new owner
+        console.log(
+          `👑 New owner of room: ${roomCode} is ${username}`
+        );
+        rooms[roomCode].forEach((player) => {
+          io.to(player.id).emit("playerListUpdate", {
+            realId: player.id,
+            players: rooms[roomCode],
+            ownerId: roomOwner.id,
+          });
         });
       }
     }
@@ -70,5 +89,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(port, () => {
-  console.log(`Server is running on PORT: ${port}`);
+  console.log(`🖥️  Server is running on PORT: ${port}  ⎛⎝ ≽ > ⩊ < ≼ ⎠⎞`);
 });
