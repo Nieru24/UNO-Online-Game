@@ -11,12 +11,6 @@ import CardAsset from "../utils/cardAsset";
 export default function Game() {
   const socket = useRef<Socket | null>(null);
 
-  const [players, setPlayers] = useState<{ id: string; username: string }[]>(
-    []
-  );
-  const [ownerId, setOwnerId] = useState<string | null>(null);
-  const [showStartButton, setShowStartButton] = useState(Boolean);
-
   const { username } = useUser();
   const searchParams = useSearchParams();
   const roomCode = searchParams.get("roomCode");
@@ -24,6 +18,24 @@ export default function Game() {
   // For type of connection (Use ENV, later)
   const glitchAddress = "";
   const localAddress = "http://localhost:8080";
+
+
+  // For Game
+  const [players, setPlayers] = useState<{ id: string; username: string }[]>(
+    []
+  );
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [showStartButton, setShowStartButton] = useState(Boolean);
+  const [cardsPile, setCardsPile] = useState<{ id: string; code: string }[]>(
+    []
+  );
+  const [thisPlayerDeck, setThisPlayerDeck] = useState<any[]>([]);
+  const [showLobby, setShowLobby] = useState(true);
+  const [gameOver, setGameOver] = useState(true);
+  const [winner, setWinner] = useState("");
+  const [turn, setTurn] = useState("clockwise");
+  const [currentColor, setCurrentColor] = useState("");
+  const [currentNumber, setCurrentNumber] = useState("");
 
   useEffect(() => {
     if (!roomCode || !username) return;
@@ -38,15 +50,30 @@ export default function Game() {
     });
 
     // Test
-    socket.current.on("joinedRoom", (data) => {
-      console.log(data.message);
-    });
+    // socket.current.on("joinedRoom", (data) => {
+    //   console.log(data.message);
+    // });
 
+    // Update for every player that joined in lobby(socket room)
     socket.current.on("playerListUpdate", (data) => {
       setPlayers(data.players);
       setOwnerId(data.ownerId);
       setShowStartButton(data.ownerId === data.realId);
-      // console.log("Player list updated!!!")
+    });
+
+    // Update when the handleStartGame is triggered by owner
+    socket.current.on("gameStarted", ({ updatedPlayers, cardsPile }) => {
+      const thisPlayerID = socket.current?.id;
+      const thisPlayer = (updatedPlayers as any[]).find(p => p.id === thisPlayerID);
+
+      setPlayers(updatedPlayers);
+      setCardsPile(cardsPile);
+      setThisPlayerDeck(thisPlayer?.deck || []);
+      setShowLobby(false);
+
+      console.log("Game started!");
+      console.log("This player deck:", thisPlayer?.deck);
+      console.log("Updated Cards pile:", cardsPile)
     });
 
     return () => {
@@ -54,25 +81,6 @@ export default function Game() {
     };
   }, [roomCode, username]);
 
-  // Game start
-  const [gameOver, setGameOver] = useState(true);
-  const [winner, setWinner] = useState("");
-  const [turn, setTurn] = useState("clockwise");
-  const [currentColor, setCurrentColor] = useState("");
-  const [currentNumber, setCurrentNumber] = useState("");
-  const [cardsPile, setCardsPile] = useState<{ id: string; code: string }[]>(
-    []
-  );
-
-  // const [drawCardPile, setDrawCardPile] = useState([]);
-
-  // useEffect(() => {
-  //   const deck = packOfCards();
-  //   const shuffled = shuffleArray(deck);
-  //   setCardsPile(shuffled);
-  // }, []);
-
-  const [showLobby, setShowLobby] = useState(true);
   const handleStartGame = () => {
     const shuffledCards = shuffleArray(packOfCards());
     const cardsPile = [...shuffledCards];
@@ -81,16 +89,18 @@ export default function Game() {
       id: `${code}-${index}`,
       code,
     }));
-    setCardsPile(deckWithIds);
+
     const updatedPlayers = players.map((player) => ({
       ...player,
-      deck: cardsPile.splice(0, 7),
+      deck: deckWithIds.splice(0, 7),
     }));
-    setShowLobby(false); //Remove comment after testing
-    console.log(players);
-    console.log(updatedPlayers);
-    console.log(cardsPile);
-  }; // Problem: no emmiting updatedPlayes and  cardsPile,
+
+    socket.current?.emit("startGame", {
+      roomCode,
+      updatedPlayers,
+      cardsPile: deckWithIds,
+    });
+  };
 
   return (
     <div className="text-white bg-black h-screen w-screen flex flex-col items-center justify-center relative">
@@ -158,7 +168,7 @@ export default function Game() {
             <div>Place Card</div>
             <div>
               In hand cards
-              {cardsPile.map(({ id, code }) => (
+              {thisPlayerDeck.map(({ id, code }) => (
                 <div key={id} className="flex flex-col items-center">
                   <CardAsset code={code} size={60} />
                   <span className="text-white text-xs">{code}</span>

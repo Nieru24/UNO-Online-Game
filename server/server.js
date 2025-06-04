@@ -39,9 +39,7 @@ io.on("connection", (socket) => {
     rooms[roomCode].push({ id: socket.id, username });
 
     const roomOwner = rooms[roomCode][0];
-    console.log(
-      `👑 Owner of room ${roomCode} is ${roomOwner.username}`
-    );
+    console.log(`👑 Owner of room ${roomCode} is ${roomOwner.username}`);
 
     rooms[roomCode].forEach((player) => {
       io.to(player.id).emit("playerListUpdate", {
@@ -51,6 +49,12 @@ io.on("connection", (socket) => {
       });
     });
 
+    socket.on("startGame", ({ roomCode, updatedPlayers, cardsPile }) => {
+      io.to(roomCode).emit("gameStarted", {
+        updatedPlayers,
+        cardsPile,
+      });
+    });
 
     // Test
     io.to(roomCode).emit("joinedRoom", {
@@ -73,9 +77,7 @@ io.on("connection", (socket) => {
         console.log(`The room: ${roomCode} is deleted`);
       } else {
         const roomOwner = rooms[roomCode][0]; // new owner
-        console.log(
-          `👑 New owner of room: ${roomCode} is ${username}`
-        );
+        console.log(`👑 New owner of room: ${roomCode} is ${username}`);
         rooms[roomCode].forEach((player) => {
           io.to(player.id).emit("playerListUpdate", {
             realId: player.id,
