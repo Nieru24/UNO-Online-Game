@@ -17,10 +17,13 @@ export default function Game() {
 
   // For type of connection (Use ENV, later)
   const glitchAddress = "";
-  const localAddress = "http://localhost:8080";
+  const serverAddress = process.env.NEXT_PUBLIC_SERVER_ADDRESS;
 
 
   // For Game
+  type ActionType = "uno" | "color" | null;
+  const devMode = process.env.NEXT_PUBLIC_DEV_MODE === "true";
+
   const [players, setPlayers] = useState<{ id: string; username: string }[]>(
     []
   );
@@ -29,18 +32,29 @@ export default function Game() {
   const [cardsPile, setCardsPile] = useState<{ id: string; code: string }[]>(
     []
   );
+  const [playedCardsPile, setPlayedCardsPile] = useState<{ id: string; code: string }[]>(
+    []
+  );
   const [thisPlayerDeck, setThisPlayerDeck] = useState<any[]>([]);
+  const [theEnemiesDeck, setTheEnemiesDeck] = useState<any[]>([]);
+
   const [showLobby, setShowLobby] = useState(true);
+  const [activeAction, setActiveAction] = useState<ActionType>(null); // Set(color) if wild card is played, get back after color is picked
+  const [topEnemies, setTopEnemies] = useState<any[]>([]);
+  const [leftEnemies, setLeftEnemies] = useState<any[]>([]);
+  const [rightEnemies, setRightEnemies] = useState<any[]>([]);
   const [gameOver, setGameOver] = useState(true);
   const [winner, setWinner] = useState("");
-  const [turn, setTurn] = useState("clockwise");
+  const [turn, setTurn] = useState("clockwise"); // Turn will be based on shuffledPlayers state using index
   const [currentColor, setCurrentColor] = useState("");
   const [currentNumber, setCurrentNumber] = useState("");
 
+
+  // For socket connection
   useEffect(() => {
     if (!roomCode || !username) return;
 
-    socket.current = io(localAddress, {
+    socket.current = io(serverAddress, {
       transports: ["websocket"],
     });
 
@@ -54,32 +68,75 @@ export default function Game() {
     //   console.log(data.message);
     // });
 
-    // Update for every player that joined in lobby(socket room)
-    socket.current.on("playerListUpdate", (data) => {
-      setPlayers(data.players);
-      setOwnerId(data.ownerId);
-      setShowStartButton(data.ownerId === data.realId);
-    });
-
-    // Update when the handleStartGame is triggered by owner
-    socket.current.on("gameStarted", ({ updatedPlayers, cardsPile }) => {
-      const thisPlayerID = socket.current?.id;
-      const thisPlayer = (updatedPlayers as any[]).find(p => p.id === thisPlayerID);
-
-      setPlayers(updatedPlayers);
-      setCardsPile(cardsPile);
-      setThisPlayerDeck(thisPlayer?.deck || []);
-      setShowLobby(false);
-
-      console.log("Game started!");
-      console.log("This player deck:", thisPlayer?.deck);
-      console.log("Updated Cards pile:", cardsPile)
-    });
-
     return () => {
       socket.current?.disconnect();
     };
   }, [roomCode, username]);
+
+
+  // For lobby
+  useEffect(() => {
+    if (!socket.current) return;
+
+    const handlePlayerListUpdate = (data: any) => {
+      setPlayers(data.players);
+      setOwnerId(data.ownerId);
+      setShowStartButton(data.ownerId === data.realId);
+    };
+
+    // Update for every player that joined in lobby(socket room)
+    socket.current.on("playerListUpdate", handlePlayerListUpdate);
+
+    return () => {
+      socket.current?.off("playerListUpdate", handlePlayerListUpdate);
+    };
+  }, []);
+
+
+  // For handleGameStart
+  useEffect(() => {
+    if (!socket.current) return;
+
+    const handleGameStarted = ({ updatedPlayers, shuffledPlayers, cardsPile }: any) => {
+      const thisPlayerID = socket.current?.id;
+      const thisPlayer = updatedPlayers.find((p: any) => p.id === thisPlayerID);
+
+      const testEnemiesDeck = shuffledPlayers.filter((p: any) => p.id !== thisPlayerID);
+      const leftEnemies = testEnemiesDeck.filter((_: any, index: number) => index % 3 === 1);
+      const topEnemies = testEnemiesDeck.filter((_: any, index: number) => index % 3 === 0);
+      const rightEnemies = testEnemiesDeck.filter((_: any, index: number) => index % 3 === 2);
+
+      setLeftEnemies(leftEnemies);
+      setTopEnemies(topEnemies);
+      setRightEnemies(rightEnemies);
+
+      const testDeck = [{ id: 'D4W-0', code: 'D4W' }, { id: 'D4W-1', code: 'D4W' }, { id: 'D4W-2', code: 'D4W' }, { id: 'D4W-3', code: 'D4W' }, { id: 'D4W-4', code: 'D4W' }, { id: 'D4W-5', code: 'D4W' }, { id: 'D4W-6', code: 'D4W' }];
+      // setThisPlayerDeck(testDeck);
+
+      setPlayers(updatedPlayers);
+      setCardsPile(cardsPile);
+      setThisPlayerDeck(thisPlayer?.deck || []); // Comment if testing deck array
+      setShowLobby(false);
+      setActiveAction("uno");
+
+      if (devMode) {
+        console.log("Game started!");
+        console.log("All players data:", updatedPlayers);
+        console.log("Shuffled players data:", shuffledPlayers);
+        console.log("This Player test:", thisPlayer);
+        console.log("This player deck:", thisPlayer?.deck);
+        console.log("The Enemies players:", testEnemiesDeck);
+        console.log("Updated Cards pile:", cardsPile);
+      }
+    };
+
+    socket.current.on("gameStarted", handleGameStarted);
+
+    return () => {
+      socket.current?.off("gameStarted", handleGameStarted);
+    };
+  }, []);
+
 
   const handleStartGame = () => {
     const shuffledCards = shuffleArray(packOfCards());
@@ -95,9 +152,13 @@ export default function Game() {
       deck: deckWithIds.splice(0, 7),
     }));
 
+    // Test
+    const shuffledPlayers = shuffleArray([...updatedPlayers]);
+
     socket.current?.emit("startGame", {
       roomCode,
       updatedPlayers,
+      shuffledPlayers,
       cardsPile: deckWithIds,
     });
   };
@@ -145,37 +206,89 @@ export default function Game() {
       <div className="game flex flex-col h-screen w-screen p-4 gap-2">
         <div className="topSectionBox flex flex-1 gap-2">
           <div className="leftEnemies flex flex-col justify-center items-center w-[15%] bg-red-600">
-            Left Display
+            {leftEnemies.map((player, index) => (
+              <div key={player.id} className="mb-2 text-center">
+                <div className="text-white">{player.username}</div>
+                <div className="flex flex-wrap justify-center">
+                  {player.deck.map((card: any) => (
+                    <CardAsset key={card.id} code={devMode ? card.code : "Deck"} size={60} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="centerSectionBox flex flex-col flex-1 gap-2">
             <div className="topEnemies flex justify-center items-center h-[35%] bg-white">
-              Top Display
+              {topEnemies.map((player, index) => (
+                <div key={player.id} className="mx-2 text-center">
+                  <div className="text-black">{player.username}</div>
+                  <div className="flex flex-wrap justify-center">
+                    {player.deck.map((card: any) => (
+                      <CardAsset key={card.id} code={devMode ? card.code : "Deck"} size={60} />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="centerDisplay flex-1 flex items-center justify-center bg-green-100 rounded">
-              Center Display
+              <div>Played Cards</div>
+              <div><CardAsset code="Deck" size={150} /></div>
             </div>
           </div>
 
           <div className="rightEnemies flex flex-col justify-center items-center w-[15%] bg-orange-600">
-            Right Display
+            {rightEnemies.map((player, index) => (
+              <div key={player.id} className="mb-2 text-center">
+                <div className="text-white">{player.username}</div>
+                <div className="flex flex-wrap justify-center">
+                  {player.deck.map((card: any) => (
+                    <CardAsset key={card.id} code={devMode ? card.code : "Deck"} size={60} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="youDisplay h-[35%] flex justify-center items-center bg-green-600">
-          <div className="player-card">
-            <div>Place Card</div>
-            <div>
-              In hand cards
+        <div className="youDisplay h-[35%] flex flex-col justify-center items-center bg-green-600">
+          <div className="player-card flex">
+            <div className="flex flex-row">
               {thisPlayerDeck.map(({ id, code }) => (
-                <div key={id} className="flex flex-col items-center">
-                  <CardAsset code={code} size={60} />
-                  <span className="text-white text-xs">{code}</span>
+                <div key={id} className="flex flex-row items-center m-[2px] cursor-pointer">
+                  <CardAsset code={code} size={90} />
+                  {/* <span className="text-white text-xs">{code}</span> */}
                 </div>
               ))}
             </div>
           </div>
+          {activeAction === "uno" && (
+            <div className="uno flex h-[35%] flex-row items-center">
+              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 m-1 font-medium text-white hover:bg-neutral-700 focus:ring-[#928E8F] focus:ring-offset-2">
+                Uno!
+              </button>
+              <button className="inline-flex h-12 w-[500px] items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 m-1 font-medium text-white hover:bg-neutral-700 focus:ring-[#928E8F] focus:ring-offset-2">
+                You didn't say Uno
+              </button>
+            </div>
+          )}
+          {activeAction === "color" && (
+            <div className="pickColor flex h-[35%] flex-row items-center">
+              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 rounded-l-xl border-neutral-900 bg-[#EA323C] px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2">
+                Red
+              </button>
+              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 border-neutral-900 bg-[#33984B] px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2">
+                Green
+              </button>
+              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 border-neutral-900 bg-[#0098DC] px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2">
+                Blue
+              </button>
+              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 rounded-r-xl border-neutral-900 bg-[#FFC825] px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2">
+                Yellow
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

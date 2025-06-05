@@ -49,9 +49,10 @@ io.on("connection", (socket) => {
       });
     });
 
-    socket.on("startGame", ({ roomCode, updatedPlayers, cardsPile }) => {
+    socket.on("startGame", ({ roomCode, updatedPlayers, shuffledPlayers, cardsPile }) => {
       io.to(roomCode).emit("gameStarted", {
         updatedPlayers,
+        shuffledPlayers,
         cardsPile,
       });
     });

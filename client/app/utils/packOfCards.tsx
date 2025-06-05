@@ -36,10 +36,10 @@ const cardRules: CardRule[] = [
   { name: "7", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
   { name: "8", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
   { name: "9", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "skip", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "_", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "S_", colors: ["R", "G", "B", "Y"], countPerColor: 2 }, // skip cards
+  { name: "R_", colors: ["R", "G", "B", "Y"], countPerColor: 2 }, // reverse card
   { name: "D2", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "W", colors: "wild", countTotal: 4 },
+  { name: "__W", colors: "wild", countTotal: 4 },
   { name: "D4W", colors: "wild", countTotal: 4 },
 
 ];

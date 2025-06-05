@@ -4,13 +4,17 @@ type CardProps = {
 };
 
 export default function Card({ code, size = 80}: CardProps) {
+  const cardImage = code === "BACK"
+    ? "/cards/Deck.png" // replace with your actual card back image path
+    : `/cards/${code}.png`; // or whatever path you use for front cards
+
+
   return (
     <img
-      src={`/cards/${code}.png`}
+      src={cardImage}
       alt={code}
       width={size}
       height={size * 1.5}
-      className="object-contain"
     />
   );
 }
