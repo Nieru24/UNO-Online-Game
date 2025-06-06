@@ -57,6 +57,13 @@ io.on("connection", (socket) => {
       });
     });
 
+    socket.on("drawCard", ({ roomCode, drawingPlayerDecks, drawingPlayerID }) => {
+      io.to(roomCode).emit("cardDrawed", {
+        drawingPlayerDecks,
+        drawingPlayerID,
+      });
+    });
+
     // Test
     io.to(roomCode).emit("joinedRoom", {
       message: `${username} has joined room ${roomCode}`,

@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import Link from "next/link";
 import randomCodeGenerator from "../utils/randomCodeGenerator";
 import { useUser } from "../utils/userContext";
 import { useRouter } from "next/navigation";
