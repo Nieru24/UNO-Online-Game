@@ -4,9 +4,15 @@ import { io, Socket } from "socket.io-client";
 import { useUser } from "../utils/userContext";
 import { useSearchParams } from "next/navigation";
 
+import Lobby from "../components/lobby";
+import PlayerHand from "../components/playerHand";
+import CenterDisplay from "../components/topDisplay";
+
 import shuffleArray from "../utils/shuffleArray";
 import packOfCards from "../utils/packOfCards";
 import CardAsset from "../utils/cardAsset";
+import Message from "../components/message"
+import TopDisplay from "../components/topDisplay";
 
 function GameContent() {
   const socket = useRef<Socket | null>(null);
@@ -38,6 +44,7 @@ function GameContent() {
 
   const [showLobby, setShowLobby] = useState(true);
   const [activeAction, setActiveAction] = useState<ActionType>(null); // Set(color) if wild card is played, get back after color is picked
+  const [pickingColor, setPickingColor] = useState(false); // For picking color
   const [topEnemies, setTopEnemies] = useState<any[]>([]);
   const [leftEnemies, setLeftEnemies] = useState<any[]>([]);
   const [rightEnemies, setRightEnemies] = useState<any[]>([]);
@@ -179,7 +186,7 @@ function GameContent() {
     return () => {
       socket.current?.off("cardDrawed", handleCardDraw);
     };
-  }, [players]); // Problem: Max draw of 12 before it goes to another row
+  }, [players]); // Problem: Display problem if player has a lot of cards
 
 
   // For First Card
@@ -192,7 +199,7 @@ function GameContent() {
   }, [isFirstCard]);
 
 
-  // For Current Card
+  // For Current Card Test
   useEffect(() => {
     if (!socket.current) return;
     if (!currentColor && !currentType && !currentNumber) return;
@@ -206,7 +213,41 @@ function GameContent() {
     }
   }, [isFirstCard, currentColor, currentType, currentNumber]);
 
+  // For color selection if Wild Card is played
+  useEffect(() => {
+    if (!socket.current) return;
 
+    const chooseColor = ({ color, number, type }: any) => {
+      setCurrentColor(color);
+      setCurrentType(number);
+      setCurrentNumber(type);
+      console.log("Color chosen:", color);
+    };
+
+    socket.current.on("chooseColor", chooseColor);
+
+    return () => {
+      socket.current?.off("chooseColor", chooseColor);
+    };
+  }, [currentCard]);
+
+  // For Card Played
+  useEffect(() => {
+    if (!socket.current) return;
+
+    const handleCardDraw = ({ color, number, type, code }: any) => {
+      setCurrentCard(code);
+      setCurrentColor(color);
+      setCurrentType(type);
+      setCurrentNumber(number);
+    };
+
+    socket.current.on("playedCard", handleCardDraw);
+
+    return () => {
+      socket.current?.off("playedCard", handleCardDraw);
+    };
+  }, [currentCard]);
 
 
   /* Functions */
@@ -267,6 +308,20 @@ function GameContent() {
     });
   }
 
+  const chooseColor = (colorPicked: string) => {
+    const color = colorPicked;
+    const type = "_";
+    const number = "";
+    setActiveAction("uno");
+
+    socket.current?.emit("chooseColor", {
+      roomCode,
+      color,
+      type,
+      number,
+    });
+  }
+
 
   const getCurrentCardInfo = (code: string) => {
     const color = code.slice(-1);
@@ -313,141 +368,90 @@ function GameContent() {
     setCurrentNumber(number);
   };
 
+  const playCard = (code: string) => {
+    const color = code.slice(-1);
+    const number = code.slice(-2, -1);
+    const type = code.slice(-3, -2);
+
+    const isWild = color === "W";
+    const isDrawCard = type === "D";
+    const isCurrentDrawCard = currentType === "D";
+
+    if (isWild) {
+      // Always allow wild cards
+      // Conditional Rendering for color selection, choose color first
+      setActiveAction("color");
+      console.log("Wild card played:", code);
+    } else if (isDrawCard && isCurrentDrawCard) {
+      // If Draw 2 Card is played to Draw 4 Card
+      if (number === currentNumber) {
+        console.log("Draw card stacked by number:", code); // Same Draw 2 Card based on number
+      } else if (color === currentColor) {
+        console.log("Draw card stacked by color:", code); // Same Draw 2 card based on color dependent to selected color
+      } else {
+        console.log("Can't stack different draw cards unless color matches.");
+        return;
+      }
+    } else if (color === currentColor) {
+      console.log("Card played:", code);
+    } else if (number === currentNumber) { // For problem have same number for skip and reverse card: "_"
+      if (type === currentType) {
+        console.log("Card played:", code); // Same number "_" and same type 
+      } else {
+        console.log("Current Card:", currentCard, currentColor, currentType, currentNumber); // Same number "_" and different type 
+        console.log("Trying to play card:", code, color, number, type, isWild);
+        console.log("You can't play this card!");
+        return;
+      }
+    } else {
+      console.log("Current Card:", currentCard, currentColor, currentType, currentNumber); // No match for everything
+      console.log("Trying to play card:", code, color, number, type, isWild);
+      console.log("You can't play this card!");
+      return;
+    }
+
+    setCurrentCard(code);
+    setCurrentColor(color);
+    setCurrentType(type);
+    setCurrentNumber(number);
+
+
+    socket.current?.emit("playCard", {
+      roomCode,
+      code,
+      color,
+      type,
+      number,
+    });
+  };
+
+
+
+
 
   return (
     <div className="text-white bg-black h-screen w-screen flex flex-col items-center justify-center relative">
-      <div
-        className={
-          showLobby
-            ? "lobby flex flex-col justify-center items-center h-[500px] w-[800px] bg-[#DBD6D7] p-6 text-black rounded absolute"
-            : "hidden"
-        }
-      >
-        <div className="title text-3xl text-neutral-900 tracking-tighter text-center font-semibold w-[700px] border-b-2 border-solid border-[#928E8F] m-3 pb-1">
-          Uno: Card Game
-        </div>
-        <div className="subtitle font-medium font-semibold text-lg text-neutral-900 text-center w-[500px] border-2 border-solid border-[#928E8F] rounded-xl mt-2 p-2">
-          Room: {roomCode}
-        </div>
-        <div className="font-normal text-sm text-neutral-900 text-center w-[500px] mb-6">
-          - Lets other join by sharing the room code -
-        </div>
-        <div className="w-[500px] h-[150px] max-h-[150px] border-2 border-solid border-[#928E8F] rounded-xl text-left text-neutral-900 w-[300px] mt-2 p-2">
-          <h3 className="font-semibold mb-2">Players in Room:</h3>
-          <ul className="flex flex-wrap gap-2 text-sm text-neutral-700">
-            {players.map((p) => (
-              <li
-                className="border border-gray-300 rounded-md px-3 py-1 bg-white shadow-sm text-amber-500"
-                key={p.id}
-              >
-                {p.username}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className={showStartButton ? "w-[500px]" : "invisible"}>
-          <button
-            onClick={handleStartGame}
-            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2 mt-2"
-          >
-            Start Game
-          </button>
-        </div>
-      </div>
-      <div className="game flex flex-col h-screen w-screen p-4 gap-2"> {/*h-[900px] w-[1280px]*/}
-        <div className="topSectionBox flex flex-1 gap-2">
-          <div className="leftEnemies flex flex-col justify-center items-center w-[15%] bg-red-600">
-            {leftEnemies.map((player, index) => (
-              <div key={player.id} className="mb-2 text-center">
-                <div className="text-white">{player.username}</div>
-                <div className="flex flex-wrap justify-center">
-                  {player.deck.map((card: any) => (
-                    <CardAsset key={card.id} code={devMode ? card.code : "Deck"} size={60} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="centerSectionBox flex flex-col flex-1 gap-2">
-            <div className="topEnemies flex justify-center items-center h-[35%] bg-white">
-              {topEnemies.map((player, index) => (
-                <div key={player.id} className="mx-2 text-center">
-                  <div className="text-black">{player.username}</div>
-                  <div className="flex flex-wrap justify-center">
-                    {player.deck.map((card: any) => (
-                      <CardAsset key={card.id} code={devMode ? card.code : "Deck"} size={60} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="centerDisplay flex-1 flex items-center justify-center bg-green-100 rounded">
-              <div className="flex flex-col items-center justify-center m-10">
-                <CardAsset code={gameOnGoing? currentCard: "Deck"} size={150} />
-                <div className="invisible h-12 w-[120px] m-1">Just some invisible div! If it works, it works.</div>
-              </div>
-              <div className="flex flex-col items-center justify-center m-10">
-                <div className=""><CardAsset code="Deck" size={150} /></div>
-                <button onClick={drawCard} className="inline-flex h-12 w-[120px] items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 m-1 font-medium text-white hover:bg-neutral-700 focus:ring-[#928E8F] focus:ring-offset-2">
-                  Draw
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="rightEnemies flex flex-col justify-center items-center w-[15%] bg-orange-600">
-            {rightEnemies.map((player, index) => (
-              <div key={player.id} className="mb-2 text-center">
-                <div className="text-white">{player.username}</div>
-                <div className="flex flex-wrap justify-center">
-                  {player.deck.map((card: any) => (
-                    <CardAsset key={card.id} code={devMode ? card.code : "Deck"} size={60} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="youDisplay h-[35%] flex flex-col justify-center items-center bg-green-600">
-          <div className="player-card flex">
-            <div className="flex flex-row">
-              {thisPlayerDeck.map(({ id, code }) => (
-                <div key={id} className="flex flex-row items-center m-[2px] cursor-pointer">
-                  <CardAsset code={code} size={90} />
-                  {/* <span className="text-white text-xs">{code}</span> */}
-                </div>
-              ))}
-            </div>
-          </div>
-          {activeAction === "uno" && (
-            <div className="uno flex h-[35%] flex-row items-center">
-              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 m-1 font-medium text-white hover:bg-neutral-700 focus:ring-[#928E8F] focus:ring-offset-2">
-                Uno!
-              </button>
-              <button className="inline-flex h-12 w-[500px] items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 m-1 font-medium text-white hover:bg-neutral-700 focus:ring-[#928E8F] focus:ring-offset-2">
-                You didn't say Uno
-              </button>
-            </div>
-          )}
-          {activeAction === "color" && (
-            <div className="pickColor flex h-[35%] flex-row items-center">
-              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 rounded-l-xl border-neutral-900 bg-[#EA323C] px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2">
-                Red
-              </button>
-              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 border-neutral-900 bg-[#33984B] px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2">
-                Green
-              </button>
-              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 border-neutral-900 bg-[#0098DC] px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2">
-                Blue
-              </button>
-              <button className="inline-flex h-12 w-[120px] items-center justify-center gap-3 rounded-r-xl border-neutral-900 bg-[#FFC825] px-5 py-3 font-medium text-white hover:bg-neutral-700 focus:ring-2 focus:ring-[#928E8F] focus:ring-offset-2">
-                Yellow
-              </button>
-            </div>
-          )}
+      {showLobby && (
+        <Lobby
+          roomCode={roomCode}
+          players={players}
+          showStartButton={showStartButton}
+          handleStartGame={handleStartGame}
+        />
+      )}
+      <div className="game flex flex-col h-screen w-screen p-4 gap-2">
+        <TopDisplay
+          leftEnemies={leftEnemies}
+          topEnemies={topEnemies}
+          rightEnemies={rightEnemies}
+          devMode={devMode}
+          gameOnGoing={gameOnGoing}
+          currentCard={currentCard}
+          drawCard={drawCard}
+        />
+        <div className="youDisplay h-[35%] flex flex-row justify-center items-center bg-green-600">
+          <PlayerHand gameOnGoing={gameOnGoing} thisPlayerDeck={thisPlayerDeck} activeAction={activeAction} playCard={playCard} chooseColor={chooseColor} />
+          <Message gameOnGoing={gameOnGoing} />
         </div>
       </div>
     </div>

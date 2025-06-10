@@ -26,16 +26,16 @@ interface CardRule {
 
 // Classic cards
 const cardRules: CardRule[] = [
-  { name: "0", colors: ["R", "G", "B", "Y"], countPerColor: 1 },
-  { name: "1", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "2", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "3", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "4", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "5", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "6", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "7", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "8", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "9", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "N0", colors: ["R", "G", "B", "Y"], countPerColor: 1 },
+  { name: "N1", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "N2", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "N3", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "N4", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "N5", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "N6", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "N7", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "N8", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "N9", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
   { name: "S_", colors: ["R", "G", "B", "Y"], countPerColor: 2 }, // skip cards
   { name: "R_", colors: ["R", "G", "B", "Y"], countPerColor: 2 }, // reverse card
   { name: "D2", colors: ["R", "G", "B", "Y"], countPerColor: 2 },

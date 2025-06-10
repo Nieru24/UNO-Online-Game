@@ -49,18 +49,41 @@ io.on("connection", (socket) => {
       });
     });
 
-    socket.on("startGame", ({ roomCode, updatedPlayers, shuffledPlayers, cardsPile }) => {
-      io.to(roomCode).emit("gameStarted", {
-        updatedPlayers,
-        shuffledPlayers,
-        cardsPile,
+    socket.on(
+      "startGame",
+      ({ roomCode, updatedPlayers, shuffledPlayers, cardsPile }) => {
+        io.to(roomCode).emit("gameStarted", {
+          updatedPlayers,
+          shuffledPlayers,
+          cardsPile,
+        });
+      }
+    );
+
+    socket.on(
+      "drawCard",
+      ({ roomCode, drawingPlayerDecks, drawingPlayerID }) => {
+        io.to(roomCode).emit("cardDrawed", {
+          drawingPlayerDecks,
+          drawingPlayerID,
+        });
+      }
+    );
+
+    socket.on("chooseColor", ({ roomCode, color, number, type }) => {
+      io.to(roomCode).emit("chooseColor", {
+        color,
+        number,
+        type,
       });
     });
 
-    socket.on("drawCard", ({ roomCode, drawingPlayerDecks, drawingPlayerID }) => {
-      io.to(roomCode).emit("cardDrawed", {
-        drawingPlayerDecks,
-        drawingPlayerID,
+    socket.on("playCard", ({ roomCode, color, number, type, code }) => {
+      io.to(roomCode).emit("playedCard", {
+        color,
+        number,
+        type,
+        code,
       });
     });
 
