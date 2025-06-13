@@ -78,12 +78,14 @@ io.on("connection", (socket) => {
       });
     });
 
-    socket.on("playCard", ({ roomCode, color, number, type, code }) => {
+    socket.on("playCard", ({ roomCode, color, number, type, code, newDeck, playingPlayerID }) => {
       io.to(roomCode).emit("playedCard", {
         color,
         number,
         type,
         code,
+        newDeck,
+        playingPlayerID,
       });
     });
 

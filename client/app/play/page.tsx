@@ -44,7 +44,7 @@ function GameContent() {
 
   const [showLobby, setShowLobby] = useState(true);
   const [activeAction, setActiveAction] = useState<ActionType>(null); // Set(color) if wild card is played, get back after color is picked
-  const [pickingColor, setPickingColor] = useState(false); // For picking color
+  const [isPlayerTurn, setIsPlayerTurn] = useState(false); // For player turn
   const [topEnemies, setTopEnemies] = useState<any[]>([]);
   const [leftEnemies, setLeftEnemies] = useState<any[]>([]);
   const [rightEnemies, setRightEnemies] = useState<any[]>([]);
@@ -56,6 +56,8 @@ function GameContent() {
 
   const [gameOver, setGameOver] = useState(true);
   const [winner, setWinner] = useState("");
+  const [shuffledPlayers, setShuffledPlayers] = useState<any[]>([]);
+  const [turnIndex, setTurnIndex] = useState(0);
   const [turn, setTurn] = useState("clockwise"); // Turn will be based on shuffledPlayers state using index
 
   /* UseEffect */
@@ -124,13 +126,16 @@ function GameContent() {
       // setThisPlayerDeck(testDeck);
 
       setPlayers(updatedPlayers);
+      setShuffledPlayers(shuffledPlayers);
       setCardsPile(cardsPile);
       setThisPlayerDeck(thisPlayer?.deck || []); // Comment if testing deck array
       setShowLobby(false);
       setActiveAction("uno");
       setIsFirstCard(true)
       setGameOnGoing(true);
+      setTurnIndex(0);
 
+      handlePlayerTurn(); // In test
       if (devMode) {
         console.log("Game started!");
         console.log("All players data:", updatedPlayers);
@@ -170,7 +175,7 @@ function GameContent() {
       const topEnemies = enemiesDeck.filter((_: any, index: number) => index % 3 === 0);
       const rightEnemies = enemiesDeck.filter((_: any, index: number) => index % 3 === 2);
 
-      setPlayers(updatedPlayers)
+      setPlayers(updatedPlayers);
       setLeftEnemies(leftEnemies);
       setTopEnemies(topEnemies);
       setRightEnemies(rightEnemies);
@@ -235,7 +240,23 @@ function GameContent() {
   useEffect(() => {
     if (!socket.current) return;
 
-    const handleCardDraw = ({ color, number, type, code }: any) => {
+    const handleCardDraw = ({ color, number, type, code, newDeck, playingPlayerID }: any) => {
+
+      let updatedPlayers = players.map(player => {
+        if (player.id === playingPlayerID) {
+          return { ...player, deck: newDeck };
+        }
+        return player;
+      });
+
+      // For Mapping Card
+      const thisPlayerID = socket.current?.id;
+      const enemiesDeck = updatedPlayers.filter((p: any) => p.id !== thisPlayerID);
+      setLeftEnemies(enemiesDeck.filter((_: any, index: number) => index % 3 === 1));
+      setTopEnemies(enemiesDeck.filter((_: any, index: number) => index % 3 === 0));
+      setRightEnemies(enemiesDeck.filter((_: any, index: number) => index % 3 === 2));
+
+      setPlayers(updatedPlayers);
       setCurrentCard(code);
       setCurrentColor(color);
       setCurrentType(type);
@@ -247,7 +268,7 @@ function GameContent() {
     return () => {
       socket.current?.off("playedCard", handleCardDraw);
     };
-  }, [currentCard]);
+  }, [players]);
 
 
   /* Functions */
@@ -377,6 +398,9 @@ function GameContent() {
     const isDrawCard = type === "D";
     const isCurrentDrawCard = currentType === "D";
 
+    const playingPlayerID = socket.current?.id;
+    const newDeck = thisPlayerDeck.filter(card => card.code !== code)
+
     if (isWild) {
       // Always allow wild cards
       // Conditional Rendering for color selection, choose color first
@@ -397,6 +421,12 @@ function GameContent() {
     } else if (number === currentNumber) { // For problem have same number for skip and reverse card: "_"
       if (type === currentType) {
         console.log("Card played:", code); // Same number "_" and same type 
+        if (type === "R") {
+          setTurn((prevTurn) =>
+            prevTurn === "clockwise" ? "counterclockwise" : "clockwise"
+          );
+          console.log("Turn direction changed:", turn === "clockwise" ? "counterclockwise" : "clockwise");
+        }
       } else {
         console.log("Current Card:", currentCard, currentColor, currentType, currentNumber); // Same number "_" and different type 
         console.log("Trying to play card:", code, color, number, type, isWild);
@@ -410,10 +440,13 @@ function GameContent() {
       return;
     }
 
+
+
     setCurrentCard(code);
     setCurrentColor(color);
     setCurrentType(type);
     setCurrentNumber(number);
+    setThisPlayerDeck(newDeck);
 
 
     socket.current?.emit("playCard", {
@@ -422,10 +455,34 @@ function GameContent() {
       color,
       type,
       number,
+      newDeck,
+      playingPlayerID,
     });
   };
 
 
+  const handlePlayerTurn = () => {
+    if (!shuffledPlayers.length) return;
+
+    const nextPlayer = getNextPlayer();
+    if (!nextPlayer) return;
+
+    setTurnIndex((prevIndex) => {
+      return (turn === "clockwise")
+        ? (prevIndex + 1) % shuffledPlayers.length
+        : (prevIndex - 1 + shuffledPlayers.length) % shuffledPlayers.length;
+    });
+
+    console.log("Next Player:", nextPlayer.username);
+  }
+
+  const getNextPlayer = () => {
+    if (shuffledPlayers.length === 0) return null;
+    const nextIndex = (turn === "clockwise")
+      ? (turnIndex + 1) % shuffledPlayers.length
+      : (turnIndex - 1 + shuffledPlayers.length) % shuffledPlayers.length;
+    return shuffledPlayers[nextIndex];
+  };
 
 
 
@@ -448,6 +505,7 @@ function GameContent() {
           gameOnGoing={gameOnGoing}
           currentCard={currentCard}
           drawCard={drawCard}
+          handlePlayerTurn={handlePlayerTurn}
         />
         <div className="youDisplay h-[35%] flex flex-row justify-center items-center bg-green-600">
           <PlayerHand gameOnGoing={gameOnGoing} thisPlayerDeck={thisPlayerDeck} activeAction={activeAction} playCard={playCard} chooseColor={chooseColor} />
