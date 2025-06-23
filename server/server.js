@@ -78,16 +78,29 @@ io.on("connection", (socket) => {
       });
     });
 
-    socket.on("playCard", ({ roomCode, color, number, type, code, newDeck, playingPlayerID }) => {
-      io.to(roomCode).emit("playedCard", {
+    socket.on(
+      "playCard",
+      ({
+        roomCode,
+        code,
+        type,
         color,
         number,
-        type,
-        code,
-        newDeck,
-        playingPlayerID,
-      });
-    });
+        playerTurnIndex,
+        numberCardDraw,
+        drawCardPlayed,
+      }) => {
+        io.to(roomCode).emit("playCard", {
+          code,
+          type,
+          color,
+          number,
+          playerTurnIndex,
+          numberCardDraw,
+          drawCardPlayed,
+        });
+      }
+    );
 
     // Test
     io.to(roomCode).emit("joinedRoom", {

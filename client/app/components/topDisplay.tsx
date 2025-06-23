@@ -9,7 +9,6 @@ interface TopDisplayProps {
   topEnemies: Enemy[];
   rightEnemies: Enemy[];
   devMode: boolean;
-  handlePlayerTurn: () => void;
 }
 
 interface Enemy {
@@ -26,7 +25,6 @@ const TopDisplay: React.FC<TopDisplayProps> = ({
   gameOnGoing,
   currentCard,
   drawCard,
-  handlePlayerTurn,
 }) => (
   <div className="topSectionBox flex flex-1 gap-2">
     <div className="leftEnemies flex flex-col justify-center items-center w-[15%] bg-red-600">
@@ -71,7 +69,6 @@ const TopDisplay: React.FC<TopDisplayProps> = ({
           </div>
           <div className="flex flex-col items-center justify-center">
             <button
-              onClick={handlePlayerTurn}
               className="inline-flex h-12 w-[120px] items-center justify-center gap-3 rounded-xl bg-neutral-900 px-5 py-3 m-2 font-medium text-white hover:bg-neutral-700 focus:ring-[#928E8F] focus:ring-offset-2"
             >
               End Turn

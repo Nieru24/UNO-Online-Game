@@ -26,21 +26,21 @@ interface CardRule {
 
 // Classic cards
 const cardRules: CardRule[] = [
-  { name: "N0", colors: ["R", "G", "B", "Y"], countPerColor: 1 },
-  { name: "N1", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "N2", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "N3", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "N4", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "N5", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "N6", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "N7", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "N8", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "N9", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "S_", colors: ["R", "G", "B", "Y"], countPerColor: 2 }, // skip cards
-  { name: "R_", colors: ["R", "G", "B", "Y"], countPerColor: 2 }, // reverse card
-  { name: "D2", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
-  { name: "__W", colors: "wild", countTotal: 4 },
-  { name: "D4W", colors: "wild", countTotal: 4 },
+  { name: "NORM0", colors: ["R", "G", "B", "Y"], countPerColor: 1 },
+  { name: "NORM1", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "NORM2", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "NORM3", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "NORM4", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "NORM5", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "NORM6", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "NORM7", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "NORM8", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "NORM9", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "SKIP_", colors: ["R", "G", "B", "Y"], countPerColor: 2 }, // skip cards
+  { name: "REVS_", colors: ["R", "G", "B", "Y"], countPerColor: 2 }, // reverse card
+  { name: "DRAW2", colors: ["R", "G", "B", "Y"], countPerColor: 2 },
+  { name: "WILD_W", colors: "wild", countTotal: 4 },
+  { name: "DRAW4W", colors: "wild", countTotal: 4 },
 
 ];
 

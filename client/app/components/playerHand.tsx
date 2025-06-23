@@ -5,11 +5,11 @@ interface PlayerHandProps {
   thisPlayerDeck: { id: string; code: string }[];
   activeAction: "uno" | "color" | null;
   gameOnGoing: boolean;
-  playCard: (code: string) => void;
   chooseColor: (color: string) => void;
+  playCard: (code: string) => void;
 }
 
-const PlayerHand: React.FC<PlayerHandProps> = ({ gameOnGoing, thisPlayerDeck, activeAction, playCard, chooseColor }) => (
+const PlayerHand: React.FC<PlayerHandProps> = ({ gameOnGoing, thisPlayerDeck, playCard, activeAction, chooseColor }) => (
   <div>
     {gameOnGoing === true && (
       <div className="playercard flex flex-row">
