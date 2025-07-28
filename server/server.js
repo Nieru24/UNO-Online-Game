@@ -102,6 +102,10 @@ io.on("connection", (socket) => {
       }
     );
 
+    socket.on("endTurn", ({ roomCode, playerTurnIndex }) => {
+      io.to(roomCode).emit("endTurn", { playerTurnIndex });
+    });
+
     // Test
     io.to(roomCode).emit("joinedRoom", {
       message: `${username} has joined room ${roomCode}`,
